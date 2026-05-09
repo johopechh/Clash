@@ -1,14 +1,13 @@
 # 必读！！！
 # 此版本没有做防泄露处理，如介意请使用另一个名字为 configdns 的版本
 # 注意规则在满足自己需求情况下，尽量做到精简，不要过度复杂，以免影响性能。
-# 跑裸核用户请自行去掉下方控制面板模块的注释。
 
 # ================================
 # 1、机场订阅
 # ================================
 proxy-providers:
   Airport1:
-    url: "订阅地址"
+    url: "你的机场订阅地址"
     type: http
     interval: 86400
     health-check:
@@ -41,7 +40,7 @@ profile:
   store-selected: true
   store-fake-ip: true
 
-# 为防止使用插件朋友遇到面板问题，默认注释控制面板模块。
+# 如需裸核控制面板，可自行取消注释
 # external-controller: 0.0.0.0:9090
 # secret: ""
 # external-ui: ui
@@ -100,7 +99,7 @@ dns:
     - https://doh.pub/dns-query
 
 # ================================
-# 7、出站策略组：改成你自己正在用的模板
+# 7、策略组：你的模板
 # ================================
 proxy-groups:
   - {name: 🧚 AI, type: select, proxies: [台湾-自动, 日本-自动, 新加坡-自动, 韩国-自动, 美国-自动, 其他-手动, REJECT]}
@@ -125,10 +124,10 @@ proxy-groups:
 
   - {name: 🐟 漏网之鱼, type: select, proxies: [直连, 🌍 国外, 其他-手动]}
 
-  # ================================
-  # 8、节点组：使用 include-all 自动包含订阅节点
-  # ================================
-  - {name: 所有-自动, type: url-test, include-all: true, tolerance: 150, interval: 60, url: https://www.gstatic.com/generate_204, filter: ".*"}
+# ================================
+# 8、节点组：include-all 自动包含机场节点
+# ================================
+  - {name: 所有-自动, type: url-test, include-all: true, tolerance: 150, interval: 60, url: https://www.gstatic.com/generate_204, filter: "^((?!(直连)).)*$"}
 
   - {name: 港台日新韩-自动, type: url-test, include-all: true, tolerance: 150, interval: 60, url: https://www.gstatic.com/generate_204, filter: "(广港|广台|广日|广新|广韩|广美|香港|HK|Hong Kong|🇭🇰|台湾|TW|🇹🇼|日本|JP|🇯🇵|新加坡|SG|🇸🇬|韩国|KR|🇰🇷)"}
 
@@ -146,96 +145,210 @@ proxy-groups:
 
   - {name: 美国-自动, type: url-test, include-all: true, tolerance: 150, interval: 60, url: https://www.gstatic.com/generate_204, filter: "(美|US|🇺🇸)"}
 
-  - {name: 其他-手动, type: select, include-all: true}
+  - {name: 其他-手动, type: select, include-all: true, filter: "^((?!(直连)).)*$"}
 
 # ================================
-# 9、规则匹配：精简版
+# 9、规则匹配：Blackmatrix7 细分 + MetaCubeX 兜底
 # ================================
 rules:
-  # 局域网 / 私有地址直连
+  # 私有地址 / 局域网优先直连
   - RULE-SET,private_ip,直连,no-resolve
   - RULE-SET,private_domain,直连
 
-  # 机场自己的规则和轻量代理规则，统一走国外
-  - DOMAIN-SUFFIX,qichiyu.com,🌍 国外
-  - RULE-SET,proxylite,🌍 国外
+  # AI：最高优先级，强制代理
+  - RULE-SET,openai,🧚 AI
+  - RULE-SET,claude,🧚 AI
+  - RULE-SET,gemini,🧚 AI
+  - RULE-SET,copilot,🧚 AI
 
-  # AI：最高优先级
-  - RULE-SET,ai,🧚 AI
-
-  # GitHub
-  - RULE-SET,github_domain,📘 GitHub
-
-  # YouTube / Google
-  - RULE-SET,youtube_domain,📺 YouTube
-  - RULE-SET,google_domain,🍀 Google
-
-  # Apple 直连
-  - RULE-SET,apple_domain,直连
+  # Google
+  - RULE-SET,google,🍀 Google
+  - RULE-SET,google_ip,🍀 Google
 
   # Telegram
-  - RULE-SET,telegram_domain,🙋 Telegram
-
-  # Netflix / 流媒体
-  - RULE-SET,netflix_domain,📀 流媒体
-
-  # IP 类规则
-  - RULE-SET,apple_ip,直连
-  - RULE-SET,google_ip,🍀 Google
+  - RULE-SET,telegram,🙋 Telegram
   - RULE-SET,telegram_ip,🙋 Telegram
-  - RULE-SET,netflix_ip,📀 流媒体
 
-  # 非中国大陆域名统一走国外
+  # GitHub
+  - RULE-SET,github,📘 GitHub
+
+  # Steam 中国 CDN：强制直连
+  - RULE-SET,steamcn,🎯 大陆
+
+  # 游戏平台
+  - RULE-SET,steam,🕹️ 游戏平台
+  - RULE-SET,epic,🕹️ 游戏平台
+  - RULE-SET,xbox,🕹️ 游戏平台
+
+  # YouTube
+  - RULE-SET,youtube,📺 YouTube
+
+  # 流媒体兜底
+  - RULE-SET,globalmedia,📀 流媒体
+
+  # 非中国大陆域名兜底：比单纯 gfw 更全面
   - RULE-SET,geolocation-!cn,🌍 国外
 
   # 中国大陆直连
-  - RULE-SET,cn_domain,直连
-  - RULE-SET,cn_ip,直连
+  - RULE-SET,cn_domain,🎯 大陆
+  - RULE-SET,cn_ip,🎯 大陆
 
   # 最终兜底
   - MATCH,🐟 漏网之鱼
 
 # ================================
-# 10、规则集：精简保留实际用到的 mrs 规则
+# 10、规则锚点：MetaCubeX mrs 用
 # ================================
 rule-anchor:
   ip: &ip {type: http, interval: 86400, behavior: ipcidr, format: mrs}
   domain: &domain {type: http, interval: 86400, behavior: domain, format: mrs}
-  class: &class {type: http, interval: 86400, behavior: classical, format: text}
 
+# ================================
+# 11、规则集：混合推荐版
+# ================================
 rule-providers:
-  fakeipfilter_domain: {<<: *domain, url: "https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs"}
+  # ===== MetaCubeX：Fake-IP 过滤 / 私有地址 / 国内外兜底 =====
+  fakeipfilter_domain:
+    <<: *domain
+    url: "https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs"
+    path: ./ruleset/fakeipfilter_domain.mrs
 
-  private_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"}
+  private_domain:
+    <<: *domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs"
+    path: ./ruleset/private_domain.mrs
 
-  proxylite: {<<: *class, url: "https://raw.githubusercontent.com/qichiyuhub/rule/refs/heads/main/rules/proxy.list"}
+  private_ip:
+    <<: *ip
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"
+    path: ./ruleset/private_ip.mrs
 
-  ai: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs"}
+  geolocation-!cn:
+    <<: *domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"
+    path: ./ruleset/geolocation-!cn.mrs
 
-  youtube_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}
+  cn_domain:
+    <<: *domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"
+    path: ./ruleset/cn_domain.mrs
 
-  google_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}
+  cn_ip:
+    <<: *ip
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"
+    path: ./ruleset/cn_ip.mrs
 
-  github_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs"}
+  google_ip:
+    <<: *ip
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"
+    path: ./ruleset/google_ip.mrs
 
-  telegram_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs"}
+  telegram_ip:
+    <<: *ip
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"
+    path: ./ruleset/telegram_ip.mrs
 
-  netflix_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}
+  # ===== Blackmatrix7：服务细分规则 =====
+  openai:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/OpenAI/OpenAI.yaml
+    path: ./ruleset/openai.yaml
 
-  apple_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"}
+  claude:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude.yaml
+    path: ./ruleset/claude.yaml
 
-  geolocation-!cn: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"}
+  gemini:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Gemini/Gemini.yaml
+    path: ./ruleset/gemini.yaml
 
-  cn_domain: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}
+  copilot:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Copilot/Copilot.yaml
+    path: ./ruleset/copilot.yaml
 
-  private_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"}
+  google:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Google/Google.list
+    path: ./ruleset/google.list
 
-  cn_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}
+  telegram:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.list
+    path: ./ruleset/telegram.list
 
-  google_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
+  github:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GitHub/GitHub.yaml
+    path: ./ruleset/github.yaml
 
-  telegram_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"}
+  steamcn:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/SteamCN/SteamCN.list
+    path: ./ruleset/steamcn.list
 
-  netflix_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}
+  steam:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.list
+    path: ./ruleset/steam.list
 
-  apple_ip: {<<: *ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs"}
+  epic:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.list
+    path: ./ruleset/epic.list
+
+  xbox:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox.list
+    path: ./ruleset/xbox.list
+
+  youtube:
+    type: http
+    behavior: classical
+    format: text
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list
+    path: ./ruleset/youtube.list
+
+  globalmedia:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.yaml
+    path: ./ruleset/globalmedia.yaml
